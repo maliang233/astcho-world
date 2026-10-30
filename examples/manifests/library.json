@@ -1,0 +1,64 @@
+{
+  "app_id": "library",
+  "version": "0.1.0",
+  "protocol": 1,
+  "description": "按需浏览配置目录中的 Markdown 资料",
+  "entrypoint": "astcho_world.apps.library:Library",
+  "tools": [
+    {
+      "name": "list_documents",
+      "description": "列出资料名称，不自动读取内容",
+      "input_schema": {
+        "type": "object",
+        "properties": {},
+        "required": [],
+        "additionalProperties": false
+      },
+      "output_schema": {
+        "type": "object"
+      },
+      "effect": "read",
+      "timeout": 10.0
+    },
+    {
+      "name": "read_document",
+      "description": "读取指定资料",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "additionalProperties": false
+      },
+      "output_schema": {
+        "type": "object"
+      },
+      "effect": "read",
+      "timeout": 10.0
+    }
+  ],
+  "events": [],
+  "dashboard": {
+    "version": 1,
+    "name": "资料库",
+    "icon": "L",
+    "views": [
+      {
+        "id": "records",
+        "title": "应用记录",
+        "source": "observations",
+        "component": "table",
+        "columns": {
+          "content.data.name": "资料名称",
+          "content.data.text": "已阅读内容"
+        }
+      }
+    ]
+  }
+}

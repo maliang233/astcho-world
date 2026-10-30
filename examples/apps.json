@@ -1,0 +1,20 @@
+{
+  "apps": [
+    {
+      "manifest": "manifests/notes.json"
+    },
+    {
+      "manifest": "manifests/qq.json",
+      "config": {
+        "bot_id": "10001",
+        "bot_name": "星回"
+      }
+    },
+    {
+      "manifest": "manifests/library.json",
+      "config": {
+        "root": "${CONFIG_DIR}/library"
+      }
+    }
+  ]
+}

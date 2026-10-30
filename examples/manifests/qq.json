@@ -1,0 +1,767 @@
+{
+  "app_id": "qq",
+  "version": "0.6.3",
+  "protocol": 1,
+  "description": "查看 QQ、读取聊天状态并自主组织和发送群聊回复",
+  "entrypoint": "astcho_world.apps.qq:QQ",
+  "tools": [
+    {
+      "name": "share_context",
+      "description": "查看已配置管理员私聊入口及面向接收人的近期分享：最近时间、24小时内次数、已分享链接与未知回执。不读任何未读正文，不发送；群的冷却到期不代表应该发送。可指定 chat_id 查看该目标。",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "chat_id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200
+          }
+        },
+        "required": [],
+        "additionalProperties": false
+      },
+      "output_schema": {
+        "type": "object"
+      },
+      "effect": "read",
+      "timeout": 10,
+      "observed_url_fields": [],
+      "idempotency_field": null
+    },
+    {
+      "name": "shared_links",
+      "description": "查找自己曾分享的资源和真实消息ID；收到旧分享的引用后，可按 sent_message_id 找回原视频链接。不会发送或读取未读消息。",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "sent_message_id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200
+          },
+          "chat_id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200
+          }
+        },
+        "required": [],
+        "additionalProperties": false
+      },
+      "output_schema": {
+        "type": "object"
+      },
+      "effect": "read",
+      "timeout": 10,
+      "observed_url_fields": [],
+      "idempotency_field": null
+    },
+    {
+      "name": "share_link",
+      "description": "向已知群或已配置管理员主动分享已经观察过的链接。url 来自其他工具的真实资源；可只发链接，也可附自己正文。不要自制分享卡片。附言遵守环境中的原版说话规则，私聊沿用原私聊要求，群聊结合对应 reply_context；可选引用需 observation_id 和 quote_message_id。优先私聊分享给管理员。主动群分享须有新近该群观察（默认5分钟）和具体 audience_reason；理由仅内部留存，不发送。群分享受间隔保护，not_sent 表示没有发送，不自动补发。同一发送意图重试必须沿用 intent_id，确实重新分享才换新意图。",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "chat_id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200
+          },
+          "intent_id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200
+          },
+          "url": {
+            "type": "string"
+          },
+          "text": {
+            "type": "string",
+            "maxLength": 4000
+          },
+          "observation_id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200
+          },
+          "quote_message_id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200
+          },
+          "audience_reason": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 400
+          }
+        },
+        "required": [
+          "chat_id",
+          "url",
+          "intent_id"
+        ],
+        "additionalProperties": false
+      },
+      "output_schema": {
+        "type": "object"
+      },
+      "effect": "write",
+      "timeout": 120.0,
+      "observed_url_fields": [
+        "url"
+      ],
+      "idempotency_field": "intent_id"
+    },
+    {
+      "name": "list_chats",
+      "description": "查看会话列表、未读数和免打扰状态",
+      "input_schema": {
+        "type": "object",
+        "properties": {},
+        "required": [],
+        "additionalProperties": false
+      },
+      "output_schema": {
+        "type": "object"
+      },
+      "effect": "read",
+      "timeout": 10,
+      "observed_url_fields": [],
+      "idempotency_field": null
+    },
+    {
+      "name": "read_messages",
+      "description": "主动读取消息；群聊返回观察快照和默认回复对象的原版聊天信息与要求。participation 提供近期自己的已知发言与当前快照内的交流概况，仅供自行判断。打开范围内的图片会沿用原视觉服务初步理解，media 逐条标明状态和图片序号。可用 view_image 针对图片提问，也可根据已有文本回复；换回复对象时可用 reply_context。",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "chat_id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100
+          },
+          "before_sequence": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "anchor_message_id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200
+          }
+        },
+        "required": [
+          "chat_id"
+        ],
+        "additionalProperties": false
+      },
+      "output_schema": {
+        "type": "object"
+      },
+      "effect": "read",
+      "timeout": 120.0,
+      "observed_url_fields": [],
+      "idempotency_field": null
+    },
+    {
+      "name": "view_image",
+      "description": "仔细查看已观察消息中的指定图片，向视觉模型提出具体问题。提供 observation_id、message_id、该消息内从 1 开始的 image_index 和 question。使用保留的原图，可换问题反复查看；返回文字观察，不代表主体直接看到了原图。不发送消息、不收藏表情、不改写聊天的初步描述。",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "observation_id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200
+          },
+          "message_id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200
+          },
+          "image_index": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "question": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 4000
+          }
+        },
+        "required": [
+          "observation_id",
+          "message_id",
+          "question"
+        ],
+        "additionalProperties": false
+      },
+      "output_schema": {
+        "type": "object"
+      },
+      "effect": "read",
+      "timeout": 120.0,
+      "observed_url_fields": [],
+      "idempotency_field": null
+    },
+    {
+      "name": "reply_context",
+      "description": "读取已观察群友消息对应的记忆、关系、情绪、日程及原版群聊要求；不生成回复、不执行社交判断、不读取快照外的新消息。",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "observation_id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200
+          },
+          "target_message_id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200
+          }
+        },
+        "required": [
+          "observation_id",
+          "target_message_id"
+        ],
+        "additionalProperties": false
+      },
+      "output_schema": {
+        "type": "object"
+      },
+      "effect": "read",
+      "timeout": 120.0,
+      "observed_url_fields": [],
+      "idempotency_field": null
+    },
+    {
+      "name": "preamble",
+      "description": "可选地向正在回应的对象发一条简短行动前说明，之后可继续使用工具并答复。群聊使用 observation_id；管理员私聊使用 chat_id；二选一，均需真实目标消息 ID。是否有必要和具体措辞由你判断，遵守环境中的原版说话规则及对应群聊/私聊要求。同一活动的同一会话最多一次，同一目标消息也最多一次；重读或重试不能增加次数。只发一条字面正文，不分段、不配图、不结算情绪或长期记忆，不占最终回复位置。",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "observation_id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200
+          },
+          "chat_id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200
+          },
+          "target_message_id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200
+          },
+          "text": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 1000
+          }
+        },
+        "required": [
+          "target_message_id",
+          "text"
+        ],
+        "additionalProperties": false,
+        "oneOf": [
+          {
+            "required": [
+              "observation_id"
+            ],
+            "not": {
+              "required": [
+                "chat_id"
+              ]
+            }
+          },
+          {
+            "required": [
+              "chat_id"
+            ],
+            "not": {
+              "required": [
+                "observation_id"
+              ]
+            }
+          }
+        ]
+      },
+      "output_schema": {
+        "type": "object"
+      },
+      "effect": "write",
+      "timeout": 120.0,
+      "observed_url_fields": [],
+      "idempotency_field": null
+    },
+    {
+      "name": "reply_group",
+      "description": "把你在主体链路中组织的正文发到已观察的群聊目标；不调用 Planner/Replyer。text 只含群友可见的正文，遵循该群 reply_context 的原版要求。可附原 Planner 范围内的情绪变化与配图决定；默认均为零/不配图。同一观察快照只执行一次社交决定，结果未知时不可换 ID 重发。",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "observation_id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200
+          },
+          "target_message_id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200
+          },
+          "reason": {
+            "type": "string",
+            "maxLength": 200
+          },
+          "excitement": {
+            "type": "number",
+            "minimum": -0.2,
+            "maximum": 0.2
+          },
+          "shyness": {
+            "type": "number",
+            "minimum": -0.2,
+            "maximum": 0.2
+          },
+          "affinity_score": {
+            "type": "number",
+            "minimum": -1,
+            "maximum": 1
+          },
+          "text": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 1000
+          },
+          "should_meme": {
+            "type": "boolean"
+          },
+          "meme_query": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "maxLength": 80
+          }
+        },
+        "required": [
+          "observation_id",
+          "target_message_id",
+          "text"
+        ],
+        "additionalProperties": false
+      },
+      "output_schema": {
+        "type": "object"
+      },
+      "effect": "write",
+      "timeout": 120.0,
+      "observed_url_fields": [],
+      "idempotency_field": null
+    },
+    {
+      "name": "no_reply",
+      "description": "明确决定不回复一份已观察群聊，可附情绪变化；沿用原注意力状态更新。不会发送或调用模型。同一快照与 reply_group/兼容参与共用一次决定。只是阅读、搜索、忽略通知或结束活动时无需调用。",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "observation_id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200
+          },
+          "target_message_id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200
+          },
+          "reason": {
+            "type": "string",
+            "maxLength": 200
+          },
+          "excitement": {
+            "type": "number",
+            "minimum": -0.2,
+            "maximum": 0.2
+          },
+          "shyness": {
+            "type": "number",
+            "minimum": -0.2,
+            "maximum": 0.2
+          },
+          "affinity_score": {
+            "type": "number",
+            "minimum": -1,
+            "maximum": 1
+          }
+        },
+        "required": [
+          "observation_id",
+          "target_message_id"
+        ],
+        "additionalProperties": false
+      },
+      "output_schema": {
+        "type": "object"
+      },
+      "effect": "write",
+      "timeout": 120.0,
+      "observed_url_fields": [],
+      "idempotency_field": null
+    },
+    {
+      "name": "set_notifications",
+      "description": "设置会话免打扰；带实际内容的@和回复仍可通知，空引用/@不通知",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "chat_id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200
+          },
+          "muted": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "chat_id",
+          "muted"
+        ],
+        "additionalProperties": false
+      },
+      "output_schema": {
+        "type": "object"
+      },
+      "effect": "write",
+      "timeout": 10,
+      "observed_url_fields": [],
+      "idempotency_field": null
+    },
+    {
+      "name": "search_messages",
+      "description": "在已接收到的本地消息中搜索；不保证远端历史完整",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "chat_id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200
+          },
+          "query": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200
+          }
+        },
+        "required": [
+          "chat_id",
+          "query"
+        ],
+        "additionalProperties": false
+      },
+      "output_schema": {
+        "type": "object"
+      },
+      "effect": "read",
+      "timeout": 10,
+      "observed_url_fields": [],
+      "idempotency_field": null
+    },
+    {
+      "name": "reply_admin",
+      "description": "向已确认的管理员私聊回复任务结果或澄清问题；只允许配置中的管理员，正文遵守环境中的原版私聊说话规则，任务结果也保持相同口吻。必须指定该私聊已收到的 message_id，不能发送到群或其他用户。",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "chat_id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200
+          },
+          "message_id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200
+          },
+          "text": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "required": [
+          "chat_id",
+          "message_id",
+          "text"
+        ],
+        "additionalProperties": false
+      },
+      "output_schema": {
+        "type": "object"
+      },
+      "effect": "write",
+      "timeout": 30.0,
+      "observed_url_fields": [],
+      "idempotency_field": null
+    },
+    {
+      "name": "participate",
+      "description": "兼容原聊天链路：用于普通私聊，或明确配置为 legacy 的群聊。默认群聊使用 reply_group/no_reply；本工具会返回不可用，不会替主体生成回复。",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "observation_id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200
+          }
+        },
+        "required": [
+          "observation_id"
+        ],
+        "additionalProperties": false
+      },
+      "output_schema": {
+        "type": "object"
+      },
+      "effect": "write",
+      "timeout": 120.0,
+      "observed_url_fields": [],
+      "idempotency_field": null
+    }
+  ],
+  "dashboard": {
+    "version": 1,
+    "name": "QQ",
+    "icon": "Q",
+    "views": [
+      {
+        "id": "records",
+        "title": "应用记录",
+        "source": "notifications",
+        "component": "table",
+        "columns": {
+          "source": "来源",
+          "message": "触发消息",
+          "state": "送达状态"
+        }
+      }
+    ],
+    "activities": {
+      "read_messages": {
+        "kind": "activity.phone",
+        "label": "正在看群消息",
+        "fallback": "base.idle",
+        "hold_seconds": 20
+      },
+      "reply_context": {
+        "kind": "activity.phone",
+        "label": "正在查看聊天上下文",
+        "fallback": "base.idle",
+        "hold_seconds": 20
+      },
+      "reply_group": {
+        "kind": "activity.phone",
+        "label": "正在回复群聊",
+        "fallback": "base.idle",
+        "hold_seconds": 20
+      },
+      "reply_admin": {
+        "kind": "activity.phone",
+        "label": "正在回复管理员",
+        "fallback": "base.idle",
+        "hold_seconds": 20
+      },
+      "preamble": {
+        "kind": "activity.phone",
+        "label": "正在发消息",
+        "fallback": "base.idle",
+        "hold_seconds": 20
+      },
+      "share_link": {
+        "kind": "activity.phone",
+        "label": "正在分享链接",
+        "fallback": "base.idle",
+        "hold_seconds": 20
+      },
+      "view_image": {
+        "kind": "activity.phone",
+        "label": "正在查看聊天图片",
+        "fallback": "base.idle",
+        "hold_seconds": 20
+      },
+      "search_messages": {
+        "kind": "activity.phone",
+        "label": "正在查找聊天记录",
+        "fallback": "base.idle",
+        "hold_seconds": 20
+      }
+    }
+  },
+  "notification_tool": "read_messages",
+  "events": [
+    "message_received",
+    "notification"
+  ],
+  "ambient_schema": {
+    "type": "object",
+    "properties": {
+      "sharing": {
+        "type": "object",
+        "properties": {
+          "preferred_private_targets": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "recent_targets": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "chat_id": {
+                  "type": "string"
+                },
+                "kind": {
+                  "enum": [
+                    "group",
+                    "private_admin"
+                  ]
+                },
+                "last_shared_at": {
+                  "type": [
+                    "number",
+                    "null"
+                  ]
+                },
+                "shared_last_24h": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "unknown_count": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "group_next_allowed_at": {
+                  "type": [
+                    "number",
+                    "null"
+                  ]
+                },
+                "recent_shares": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "url": {
+                        "type": "string"
+                      },
+                      "caption_preview": {
+                        "type": "string"
+                      },
+                      "at": {
+                        "type": [
+                          "number",
+                          "null"
+                        ]
+                      },
+                      "status": {
+                        "enum": [
+                          "completed",
+                          "unknown"
+                        ]
+                      }
+                    },
+                    "required": [
+                      "url",
+                      "caption_preview",
+                      "at",
+                      "status"
+                    ],
+                    "additionalProperties": false
+                  }
+                }
+              },
+              "required": [
+                "chat_id",
+                "kind",
+                "last_shared_at",
+                "shared_last_24h",
+                "unknown_count",
+                "group_next_allowed_at",
+                "recent_shares"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "group_interval_seconds": {
+            "type": "number",
+            "minimum": 0
+          },
+          "group_context_max_age_seconds": {
+            "type": "number",
+            "minimum": 0
+          }
+        },
+        "required": [
+          "preferred_private_targets",
+          "recent_targets",
+          "group_interval_seconds",
+          "group_context_max_age_seconds"
+        ],
+        "additionalProperties": false
+      },
+      "chats": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 200
+            },
+            "title": {
+              "type": "string"
+            },
+            "muted": {
+              "type": "integer",
+              "enum": [
+                0,
+                1
+              ]
+            },
+            "unread": {
+              "type": "integer",
+              "minimum": 0
+            }
+          },
+          "required": [
+            "id",
+            "title",
+            "muted",
+            "unread"
+          ],
+          "additionalProperties": false
+        }
+      }
+    },
+    "required": [
+      "chats"
+    ],
+    "additionalProperties": false
+  },
+  "admin_tools": []
+}

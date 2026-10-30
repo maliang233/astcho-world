@@ -1,0 +1,580 @@
+{
+  "app_id": "bilibili",
+  "version": "0.2.0",
+  "protocol": 1,
+  "description": "自主浏览 B站推荐、搜索、读取字幕与画面，选择站内互动和获取分享链接",
+  "entrypoint": "astcho_world.apps.bilibili:Bilibili",
+  "tools": [
+    {
+      "name": "account",
+      "description": "查看登录状态、生成扫码登录二维码、检查扫码或退出；凭证不经聊天传输。",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "action": {
+            "enum": [
+              "status",
+              "login",
+              "check",
+              "cancel",
+              "logout"
+            ]
+          },
+          "login_id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 100
+          }
+        },
+        "required": [
+          "action"
+        ],
+        "additionalProperties": false
+      },
+      "output_schema": {
+        "type": "object"
+      },
+      "effect": "write",
+      "timeout": 120.0,
+      "observed_url_fields": [],
+      "idempotency_field": null
+    },
+    {
+      "name": "recommend",
+      "description": "浏览当前账号推荐流；候选信息不代表已看过视频。refresh 生成新一批，page 翻本批缓存。",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "refresh": {
+            "type": "boolean"
+          },
+          "page": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 40
+          }
+        },
+        "required": [],
+        "additionalProperties": false
+      },
+      "output_schema": {
+        "type": "object"
+      },
+      "effect": "read",
+      "timeout": 60.0,
+      "observed_url_fields": [],
+      "idempotency_field": null
+    },
+    {
+      "name": "search",
+      "description": "按兴趣搜索视频，支持排序和分页。",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "keyword": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 4000
+          },
+          "page": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 40
+          },
+          "order": {
+            "enum": [
+              "totalrank",
+              "click",
+              "pubdate",
+              "dm"
+            ]
+          }
+        },
+        "required": [
+          "keyword"
+        ],
+        "additionalProperties": false
+      },
+      "output_schema": {
+        "type": "object"
+      },
+      "effect": "read",
+      "timeout": 60.0,
+      "observed_url_fields": [],
+      "idempotency_field": null
+    },
+    {
+      "name": "video",
+      "description": "查看单个视频资料及分页分P目录，不附整个合集；不表示已观看。source_ref 可回看已取得的同份资料。",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "bvid": {
+            "type": "string",
+            "pattern": "^BV[0-9A-Za-z]{10}$"
+          },
+          "page": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 40
+          },
+          "source_ref": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{64}$"
+          }
+        },
+        "required": [
+          "bvid"
+        ],
+        "additionalProperties": false
+      },
+      "output_schema": {
+        "type": "object"
+      },
+      "effect": "read",
+      "timeout": 60.0,
+      "observed_url_fields": [],
+      "idempotency_field": null
+    },
+    {
+      "name": "collection",
+      "description": "按需分页读取视频所属合集的候选目录，不展开全部视频详情。source_ref 可沿用 video 返回的同份资料。",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "bvid": {
+            "type": "string",
+            "pattern": "^BV[0-9A-Za-z]{10}$"
+          },
+          "page": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 40
+          },
+          "source_ref": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{64}$"
+          }
+        },
+        "required": [
+          "bvid"
+        ],
+        "additionalProperties": false
+      },
+      "output_schema": {
+        "type": "object"
+      },
+      "effect": "read",
+      "timeout": 60.0,
+      "observed_url_fields": [],
+      "idempotency_field": null
+    },
+    {
+      "name": "history",
+      "description": "查看本应用浏览记录索引，不重复附上字幕、画面和工具全文；可选择 platform 读取账号已有播放历史。",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "platform": {
+            "type": "boolean"
+          },
+          "page": {
+            "type": "integer",
+            "minimum": 1
+          }
+        },
+        "required": [],
+        "additionalProperties": false
+      },
+      "output_schema": {
+        "type": "object"
+      },
+      "effect": "read",
+      "timeout": 60.0,
+      "observed_url_fields": [],
+      "idempotency_field": null
+    },
+    {
+      "name": "subtitles",
+      "description": "读取指定分P的原字幕和时间戳；无字幕、登录限制会明确返回。ASR 暂不可用。",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "bvid": {
+            "type": "string",
+            "pattern": "^BV[0-9A-Za-z]{10}$"
+          },
+          "page": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "language": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "bvid"
+        ],
+        "additionalProperties": false
+      },
+      "output_schema": {
+        "type": "object"
+      },
+      "effect": "read",
+      "timeout": 60.0,
+      "observed_url_fields": [],
+      "idempotency_field": null
+    },
+    {
+      "name": "comments",
+      "description": "读取热门评论及部分楼中楼，返回实际范围；可指定 rpid 读取其回复页。",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "bvid": {
+            "type": "string",
+            "pattern": "^BV[0-9A-Za-z]{10}$"
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 40
+          },
+          "rpid": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "page": {
+            "type": "integer",
+            "minimum": 1
+          }
+        },
+        "required": [
+          "bvid"
+        ],
+        "additionalProperties": false
+      },
+      "output_schema": {
+        "type": "object"
+      },
+      "effect": "read",
+      "timeout": 60.0,
+      "observed_url_fields": [],
+      "idempotency_field": null
+    },
+    {
+      "name": "view",
+      "description": "读取封面或指定时刻故事板帧，经独立视觉模型回答问题。故事板通常仅首P，结果标明真实时间、覆盖范围及未识别项。",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "bvid": {
+            "type": "string",
+            "pattern": "^BV[0-9A-Za-z]{10}$"
+          },
+          "kind": {
+            "enum": [
+              "cover",
+              "frames"
+            ]
+          },
+          "question": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 4000
+          },
+          "at": {
+            "type": "array",
+            "maxItems": 6,
+            "items": {
+              "type": "number",
+              "minimum": 0
+            }
+          }
+        },
+        "required": [
+          "bvid",
+          "kind",
+          "question"
+        ],
+        "additionalProperties": false
+      },
+      "output_schema": {
+        "type": "object"
+      },
+      "effect": "read",
+      "timeout": 120.0,
+      "observed_url_fields": [],
+      "idempotency_field": null
+    },
+    {
+      "name": "like",
+      "description": "显式设置已赞/取消，并读取平台状态；不是切换按钮。同一行动意图重试沿用 intent_id；新意图才换新ID。未知回执不得换ID重发。",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "bvid": {
+            "type": "string",
+            "pattern": "^BV[0-9A-Za-z]{10}$"
+          },
+          "liked": {
+            "type": "boolean"
+          },
+          "intent_id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200
+          }
+        },
+        "required": [
+          "bvid",
+          "liked",
+          "intent_id"
+        ],
+        "additionalProperties": false
+      },
+      "output_schema": {
+        "type": "object"
+      },
+      "effect": "write",
+      "timeout": 60.0,
+      "observed_url_fields": [],
+      "idempotency_field": "intent_id"
+    },
+    {
+      "name": "comment",
+      "description": "谨慎选择发表或回复评论：先了解实际内容与已有讨论，有具体问题、补充或独立观点时才考虑。泛泛赞美、复述或留下浏览痕迹通常不必发表；浏览无需评论来收尾。评论正文遵守环境中的原版通用说话规则。返回平台真实评论ID。同一行动意图重试沿用 intent_id；新意图才换新ID。未知回执不得换ID重发。",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "bvid": {
+            "type": "string",
+            "pattern": "^BV[0-9A-Za-z]{10}$"
+          },
+          "text": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 4000
+          },
+          "root": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "parent": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "intent_id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200
+          }
+        },
+        "required": [
+          "bvid",
+          "text",
+          "intent_id"
+        ],
+        "additionalProperties": false
+      },
+      "output_schema": {
+        "type": "object"
+      },
+      "effect": "write",
+      "timeout": 60.0,
+      "observed_url_fields": [],
+      "idempotency_field": "intent_id"
+    },
+    {
+      "name": "favorites",
+      "description": "列出收藏夹、查询视频状态，或显式加入/移出收藏夹。同一行动意图重试沿用 intent_id；新意图才换新ID。未知回执不得换ID重发。",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "action": {
+            "enum": [
+              "list",
+              "status",
+              "add",
+              "remove"
+            ]
+          },
+          "bvid": {
+            "type": "string",
+            "pattern": "^BV[0-9A-Za-z]{10}$"
+          },
+          "folder_id": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "intent_id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200
+          }
+        },
+        "required": [
+          "action",
+          "intent_id"
+        ],
+        "additionalProperties": false
+      },
+      "output_schema": {
+        "type": "object"
+      },
+      "effect": "write",
+      "timeout": 60.0,
+      "observed_url_fields": [],
+      "idempotency_field": "intent_id"
+    },
+    {
+      "name": "share",
+      "description": "取得规范视频链接，可带已有时间点。只获取资源，不表示应当发送；可以不分享，也不需要给每次浏览提供对外产出。",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "bvid": {
+            "type": "string",
+            "pattern": "^BV[0-9A-Za-z]{10}$"
+          },
+          "at": {
+            "type": "number",
+            "minimum": 0
+          }
+        },
+        "required": [
+          "bvid"
+        ],
+        "additionalProperties": false
+      },
+      "output_schema": {
+        "type": "object"
+      },
+      "effect": "read",
+      "timeout": 60.0,
+      "observed_url_fields": [],
+      "idempotency_field": null
+    }
+  ],
+  "dashboard": {
+    "version": 1,
+    "name": "Bilibili",
+    "icon": "B",
+    "views": [],
+    "activities": {
+      "recommend": {
+        "kind": "activity.phone",
+        "label": "正在浏览推荐",
+        "fallback": "base.idle",
+        "hold_seconds": 20
+      },
+      "search": {
+        "kind": "activity.phone",
+        "label": "正在搜索视频",
+        "fallback": "base.idle",
+        "hold_seconds": 20
+      },
+      "video": {
+        "kind": "activity.phone",
+        "label": "正在查看视频资料",
+        "fallback": "base.idle",
+        "hold_seconds": 20
+      },
+      "collection": {
+        "kind": "activity.phone",
+        "label": "正在查看合集目录",
+        "fallback": "base.idle",
+        "hold_seconds": 20
+      },
+      "subtitles": {
+        "kind": "activity.phone",
+        "label": "正在阅读视频字幕",
+        "fallback": "base.idle",
+        "hold_seconds": 20
+      },
+      "comments": {
+        "kind": "activity.phone",
+        "label": "正在看评论",
+        "fallback": "base.idle",
+        "hold_seconds": 20
+      },
+      "view": {
+        "kind": "activity.phone",
+        "label": "正在查看视频画面",
+        "fallback": "base.idle",
+        "hold_seconds": 20
+      },
+      "like": {
+        "kind": "activity.phone",
+        "label": "正在操作 B站",
+        "fallback": "base.idle",
+        "hold_seconds": 20
+      },
+      "comment": {
+        "kind": "activity.phone",
+        "label": "正在写评论",
+        "fallback": "base.idle",
+        "hold_seconds": 20
+      },
+      "favorites": {
+        "kind": "activity.phone",
+        "label": "正在查看收藏",
+        "fallback": "base.idle",
+        "hold_seconds": 20
+      },
+      "share": {
+        "kind": "activity.phone",
+        "label": "正在获取分享链接",
+        "fallback": "base.idle",
+        "hold_seconds": 20
+      },
+      "history": {
+        "kind": "activity.phone",
+        "label": "正在回看浏览记录",
+        "fallback": "base.idle",
+        "hold_seconds": 20
+      }
+    }
+  },
+  "notification_tool": null,
+  "events": [],
+  "ambient_schema": {
+    "type": "object",
+    "properties": {
+      "logged_in": {
+        "type": "boolean"
+      },
+      "available": {
+        "type": "boolean"
+      },
+      "asr": {
+        "type": "boolean"
+      }
+    },
+    "required": [
+      "logged_in",
+      "available",
+      "asr"
+    ],
+    "additionalProperties": false
+  },
+  "admin_tools": [
+    "account"
+  ]
+}

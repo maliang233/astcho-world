@@ -1,0 +1,5 @@
+{
+  "default": [
+    {"start": "00:00", "end": "23:59", "talk_value": 50, "mood": "calm"}
+  ]
+}

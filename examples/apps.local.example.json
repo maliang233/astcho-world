@@ -1,0 +1,28 @@
+{
+  "apps": [
+    {"manifest": "../examples/manifests/notes.json"},
+    {
+      "manifest": "../examples/manifests/qq.json",
+      "config": {
+        "bot_id_env": "ASTCHO_WORLD_BOT_ID",
+        "bot_name": "星回",
+        "allowed_groups": ["10003"],
+        "conversation": {
+          "allow_send": true,
+          "env_file": "${CONFIG_DIR}/../.env"
+        }
+      }
+    },
+    {
+      "manifest": "../examples/manifests/library.json",
+      "config": {"root": "${CONFIG_DIR}/../examples/library"}
+    },
+    {
+      "manifest": "../examples/manifests/bilibili.json",
+      "enabled_env": "ASTCHO_WORLD_BILIBILI",
+      "config": {
+        "runtime_python": "${CONFIG_DIR}/../var/runtimes/bilibili/bin/python"
+      }
+    }
+  ]
+}

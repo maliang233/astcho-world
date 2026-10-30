@@ -1,0 +1,116 @@
+{
+  "app_id": "notes",
+  "version": "0.1.0",
+  "protocol": 1,
+  "description": "保存、列出和阅读自己的笔记",
+  "entrypoint": "astcho_world.apps.notes:Notes",
+  "tools": [
+    {
+      "name": "save",
+      "description": "保存笔记；不安排任何生活任务",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "title": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 20000
+          },
+          "text": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 20000
+          }
+        },
+        "required": [
+          "title",
+          "text"
+        ],
+        "additionalProperties": false
+      },
+      "output_schema": {
+        "type": "object"
+      },
+      "effect": "write",
+      "timeout": 10.0
+    },
+    {
+      "name": "list",
+      "description": "列出笔记标题",
+      "input_schema": {
+        "type": "object",
+        "properties": {},
+        "required": [],
+        "additionalProperties": false
+      },
+      "output_schema": {
+        "type": "object"
+      },
+      "effect": "read",
+      "timeout": 10.0
+    },
+    {
+      "name": "read",
+      "description": "阅读指定笔记",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 20000
+          }
+        },
+        "required": [
+          "id"
+        ],
+        "additionalProperties": false
+      },
+      "output_schema": {
+        "type": "object"
+      },
+      "effect": "read",
+      "timeout": 10.0
+    }
+  ],
+  "events": [],
+  "dashboard": {
+    "version": 1,
+    "name": "笔记",
+    "icon": "N",
+    "views": [
+      {
+        "id": "records",
+        "title": "应用记录",
+        "source": "operations",
+        "component": "table",
+        "columns": {
+          "tool": "操作",
+          "request.title": "标题",
+          "request.text": "内容",
+          "status": "结果"
+        }
+      }
+    ],
+    "activities": {
+      "save": {
+        "kind": "activity.notes",
+        "label": "正在写笔记",
+        "fallback": "base.idle",
+        "hold_seconds": 20
+      },
+      "read": {
+        "kind": "activity.notes",
+        "label": "正在阅读笔记",
+        "fallback": "base.idle",
+        "hold_seconds": 20
+      },
+      "list": {
+        "kind": "activity.notes",
+        "label": "正在整理笔记",
+        "fallback": "base.idle",
+        "hold_seconds": 20
+      }
+    }
+  }
+}
