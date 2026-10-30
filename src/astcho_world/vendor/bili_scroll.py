@@ -64,7 +64,7 @@ async def bili_search(keyword: str, num: int = 10, order: str = "totalrank", pag
         num: 返回视频数量，默认10，最大50
         order: 排序方式 totalrank=综合 click=播放量 pubdate=最新 dm=弹幕
         page: 第几页，从 1 开始（一页约 20 条；想多看一屏就翻页）
-
+    
     Returns:
         JSON格式的视频列表，包含标题、BV号、播放量、评论数、UP主等
     """
@@ -109,7 +109,7 @@ async def bili_comments(bvid: str, num: int = 30) -> str:
     Args:
         bvid: 视频BV号，如"BV1uNk1YxEJQ"
         num: 获取评论数量，默认30
-
+    
     Returns:
         JSON格式的评论列表，包含用户名、评论内容、点赞数、回复数
     """
